@@ -196,8 +196,8 @@ public class RemoteControlService extends NotificationListenerService implements
 		keyEvent = new KeyEvent(KeyEvent.ACTION_UP, keyCode);
 		boolean second = mRemoteController.sendMediaKeyEvent(keyEvent);
 		
-		return first && second; //успешно ли были отосланы данные нажатия
-	}
+		return first && second; //пїЅif both  clicks were delivered successfully
+		}
 	//end of helper methods.
 	
 	
