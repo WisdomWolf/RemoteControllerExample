@@ -17,17 +17,17 @@ import android.view.KeyEvent;
 
 public class RemoteControlService extends NotificationListenerService implements RemoteController.OnClientUpdateListener {
 	
-	//размеры(в пикселях) для обложки альбома
+	//dimensions in pixels for artwork
 	private static final int BITMAP_HEIGHT = 1024;
 	private static final int BITMAP_WIDTH = 1024;
 
-	//необходимо для того, чтобы мы могли подключиться к сервису
+	//Binder for our service.
 	private IBinder mBinder = new RCBinder();
 	
-	private RemoteController mRemoteController; //сам RemoteController
+	private RemoteController mRemoteController;
 	private Context mContext;
 	
-	//callback для событий обновления клиента
+	//external callback provided by user.
 	private RemoteController.OnClientUpdateListener mExternalClientUpdateListener;
 	
 	@Override
@@ -49,7 +49,7 @@ public class RemoteControlService extends NotificationListenerService implements
 	
 	@Override
 	public void onCreate() {
-		//сохраняем контекст приложения для дальнейшего использования
+		//saving the context for further reuse
 		mContext = getApplicationContext();
 		mRemoteController = new RemoteController(mContext, this);
 	}
@@ -59,10 +59,10 @@ public class RemoteControlService extends NotificationListenerService implements
 		setRemoteControllerDisabled();
 	}
 	
-	//методы, идущие далее, будут вызываться через Binder в Activity
+	//Following method will be called by Activity usign IBinder
 	
 	/**
-	 * Включает наш RemoteController, позволяя нам получать обновления от RemoteControlClient.
+	 * Enables the RemoteController thus allowing us to receive metadata updates.
 	 */
 	public void setRemoteControllerEnabled() {
 		if(!((AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE)).registerRemoteController(mRemoteController)) {
@@ -74,36 +74,36 @@ public class RemoteControlService extends NotificationListenerService implements
 	}
 	
 	/**
-	 * Выключает наш RemoteController. Обновления от RemoteControlClient поступать не будут.
+	 * Disables RemoteController.
 	 */
 	public void setRemoteControllerDisabled() {
 		((AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE)).unregisterRemoteController(mRemoteController);
 	}
 	
 	/**
-	 * Устанавливает внешний callback для событий обновления RemoteControlClient.
-	 * @param listener Callback для обновлений.
+	 * Sets up external callback for client update events.
+	 * @param listener External callback.
 	 */
 	public void setClientUpdateListener(RemoteController.OnClientUpdateListener listener) {
 		mExternalClientUpdateListener = listener;
 	}
 	
 	/**
-	 * Посылает нажатие кнопки "вперед".
+	 * Sends "next" media key press.
 	 */
 	public void sendNextKey() {
 		sendKeyEvent(KeyEvent.KEYCODE_MEDIA_NEXT);
 	}
 	
 	/**
-	 * Посылает нажатие кнопки "назад".
+	 * Sends "previous" media key press.
 	 */
 	public void sendPreviousKey() {
 		sendKeyEvent(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
 	}
 	
 	/**
-	 * Посылает нажатие кнопки "пауза", или, если плеер не отреагировал на эту кнопку, "проигрывание/пауза".
+	 * Sends "pause" media key press, or, if player ignored this button, "play/pause".
 	 */
 	public void sendPauseKey() {
 		if(!sendKeyEvent(KeyEvent.KEYCODE_MEDIA_PAUSE)) {
@@ -112,7 +112,7 @@ public class RemoteControlService extends NotificationListenerService implements
 	}
 	
 	/**
-	 * Посылает нажатие кнопки "проигрывание", или, если плеер не отреагировал на эту кнопку, "проигрывание/пауза".
+	 * Sends "play" button press, or, if player ignored it, "play/pause".
 	 */
 	public void sendPlayKey() {
 		if(!sendKeyEvent(KeyEvent.KEYCODE_MEDIA_PLAY)) {
@@ -121,22 +121,26 @@ public class RemoteControlService extends NotificationListenerService implements
 	}
 	
 	/**
-	 * @return Примерное положение в песне в миллисекундах.
+	 * @return Current song position in milliseconds.
 	 */
 	public long getEstimatedPosition() {
 		return mRemoteController.getEstimatedMediaPosition();
 	}
 	
 	/**
-	 * Прокручивает момент в песне к указанному.
-	 * @param ms Момент от начала в миллисекундах.
+	 * Seeks to given position.
+	 * @param ms Position in milliseconds.
 	 */
 	public void seekTo(long ms) {
 		mRemoteController.seekTo(ms);
 	}
-	//конец методов для Binder в Activity
+	//end of Binder methods.
 	
-	//helper-методы
+	//helper methods
+
+	//this method let us avoid the bug in RemoteController
+	//which results in Exception when calling RemoteController#setSynchronizationMode(int)
+	//doesn't seem to work though
 	private void setSynchronizationMode(RemoteController controller, int sync) {
 		if ((sync != RemoteController.POSITION_SYNCHRONIZATION_NONE) && (sync != RemoteController.POSITION_SYNCHRONIZATION_CHECK)) {
             throw new IllegalArgumentException("Unknown synchronization mode " + sync);
@@ -184,8 +188,9 @@ public class RemoteControlService extends NotificationListenerService implements
 		}
 	}
 	
+
 	private boolean sendKeyEvent(int keyCode) {
-		//посылаем нажатие и отпускание кнопки.
+		//send "down" and "up" keyevents.
 		KeyEvent keyEvent = new KeyEvent(KeyEvent.ACTION_DOWN, keyCode);
 		boolean first = mRemoteController.sendMediaKeyEvent(keyEvent);
 		keyEvent = new KeyEvent(KeyEvent.ACTION_UP, keyCode);
@@ -193,18 +198,17 @@ public class RemoteControlService extends NotificationListenerService implements
 		
 		return first && second; //успешно ли были отосланы данные нажатия
 	}
-	//конец helper-методов
+	//end of helper methods.
 	
 	
-	//Binder для подключения Activity к сервису
+	//the most simple Binder implementation
 	public class RCBinder extends Binder {
         public RemoteControlService getService() {
             return RemoteControlService.this;
         }
     }
 
-	//реализация интерфейса RemoteController.OnClientUpdateListener. Вызывает внешний callback для обработки
-	//сообщений об изменении состояния RemoteControlClient.
+	//implementation of RemoteController.OnClientUpdateListener. Does nothing other than calling external callback.
 	@Override
 	public void onClientChange(boolean arg0) {
 		if(mExternalClientUpdateListener != null) {

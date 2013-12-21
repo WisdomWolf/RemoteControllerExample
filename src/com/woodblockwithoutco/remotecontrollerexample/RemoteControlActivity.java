@@ -198,7 +198,6 @@ public class RemoteControlActivity extends Activity {
 
 	@Override
 	public void onStart() {
-		//биндим сервис к Activity
 		super.onStart();
 		Intent intent = new Intent("com.woodblockwithoutco.remotecontrollerexample.BIND_RC_CONTROL_SERVICE");
 		bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
@@ -206,7 +205,6 @@ public class RemoteControlActivity extends Activity {
 
 	@Override
 	public void onStop() {
-		//открепляем сервис от Activity
 		super.onStop();
 		if(mBound) {
 			mRCService.setRemoteControllerDisabled();
@@ -218,7 +216,7 @@ public class RemoteControlActivity extends Activity {
 	private ServiceConnection mConnection = new ServiceConnection() {	       
 		@Override
 		public void onServiceConnected(ComponentName className, IBinder service) {
-			//получаем Binder, из него вытаскиваем сервис и сразу же активируем наш RemoteController в сервисе
+			//Getting the binder and activating RemoteController instantly
 			RemoteControlService.RCBinder binder = (RemoteControlService.RCBinder) service;
 			mRCService = binder.getService();
 			mRCService.setRemoteControllerEnabled();
@@ -236,9 +234,9 @@ public class RemoteControlActivity extends Activity {
 		@Override
 		public void run() {
 			if(mBound) {
-				//если сервис все еще привязан к Activity, обновляем наш SeekBar
+				//if service is bound to our activity, we update our position seekbar
 				mScrubBar.setProgress((int) (mRCService.getEstimatedPosition() * mScrubBar.getMax() / mSongDuration));
-				mHandler.postDelayed(this, 1000); //через секунду снова обновим
+				mHandler.postDelayed(this, 1000); //setting up update event after one second
 			}
 		}
 	};
